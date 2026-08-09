@@ -15,10 +15,10 @@ const FPS = 30;
 
 function findChromePath() {
   const possiblePaths = [
+    '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome',
     '/usr/bin/google-chrome-stable',
     '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     process.env.CHROME_BIN,
@@ -29,6 +29,16 @@ function findChromePath() {
       return p;
     }
   }
+
+  try {
+    const whichPath = execSync('which chromium-browser || which google-chrome || which chromium', { encoding: 'utf8' }).trim();
+    if (whichPath && fs.existsSync(whichPath)) {
+      return whichPath;
+    }
+  } catch (e) {
+    // Ignore error
+  }
+
   return undefined;
 }
 
@@ -36,7 +46,7 @@ async function renderVideo() {
   console.log('🚀 Starting 720p @ 30 FPS Headless 3D Video Render...');
 
   const executablePath = findChromePath();
-  console.log(`🌐 Using Chrome Binary: ${executablePath || 'Default'}`);
+  console.log(`🌐 Using Chrome Binary: ${executablePath || 'System Default'}`);
 
   if (fs.existsSync(FRAMES_DIR)) {
     fs.rmSync(FRAMES_DIR, { recursive: true, force: true });
@@ -49,8 +59,9 @@ async function renderVideo() {
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
       '--enable-webgl',
-      '--use-gl=angle',
+      '--use-gl=swiftshader',
       '--ignore-gpu-blocklist',
       `--window-size=${WIDTH},${HEIGHT}`,
     ],
@@ -63,10 +74,10 @@ async function renderVideo() {
   page.on('pageerror', (err) => console.error('PAGE ERROR:', err.toString()));
 
   console.log('🌐 Loading R3F + GSAP app on http://127.0.0.1:3000...');
-  await page.goto('http://127.0.0.1:3000', { waitUntil: 'networkidle0' });
+  await page.goto('http://127.0.0.1:3000', { waitUntil: 'domcontentloaded' });
 
   await page.waitForSelector('canvas', { timeout: 30000 });
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   const totalFrames = await page.evaluate(() => (window.getTotalFrames ? window.getTotalFrames() : 300));
   console.log(`🎬 Capturing ${totalFrames} frames at 720p (1280x720) 30 FPS...`);
