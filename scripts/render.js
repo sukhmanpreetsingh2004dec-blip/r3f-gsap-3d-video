@@ -1,5 +1,5 @@
-import puppeteer from 'puppeteer';
-import { spawn, execSync } from 'child_process';
+import puppeteer from 'puppeteer-core';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,16 +13,38 @@ const WIDTH = 1280;
 const HEIGHT = 720;
 const FPS = 30;
 
+function findChromePath() {
+  const possiblePaths = [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    process.env.CHROME_BIN,
+  ];
+
+  for (const p of possiblePaths) {
+    if (p && fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return undefined;
+}
+
 async function renderVideo() {
   console.log('🚀 Starting 720p @ 30 FPS Headless 3D Video Render...');
 
-  // Ensure output directory exists
+  const executablePath = findChromePath();
+  console.log(`🌐 Using Chrome Binary: ${executablePath || 'Default'}`);
+
   if (fs.existsSync(FRAMES_DIR)) {
     fs.rmSync(FRAMES_DIR, { recursive: true, force: true });
   }
   fs.mkdirSync(FRAMES_DIR, { recursive: true });
 
   const browser = await puppeteer.launch({
+    executablePath,
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -40,7 +62,6 @@ async function renderVideo() {
   console.log('🌐 Loading R3F + GSAP app on http://localhost:3000...');
   await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
 
-  // Wait for canvas to mount
   await page.waitForSelector('canvas');
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -54,7 +75,6 @@ async function renderVideo() {
       }
     }, frame);
 
-    // Short pause for WebGL frame swap
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const frameName = `frame_${String(frame).padStart(4, '0')}.png`;
@@ -81,7 +101,7 @@ async function renderVideo() {
     execSync(ffmpegCmd, { stdio: 'inherit' });
     console.log(`🎉 3D Animated Video rendered successfully: ${OUTPUT_VIDEO}`);
   } catch (err) {
-    console.warn('⚠️ FFmpeg encoding note: If ffmpeg is not installed locally, frame images are ready in build/frames/');
+    console.warn('⚠️ FFmpeg encoding note:', err.message);
   }
 }
 
