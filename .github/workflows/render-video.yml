@@ -1,0 +1,54 @@
+name: Render 3D Animated Video (720p 30FPS)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      resolution:
+        description: 'Video Resolution'
+        required: true
+        default: '720p'
+      fps:
+        description: 'Frames Per Second'
+        required: true
+        default: '30'
+
+jobs:
+  render-video:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install System Dependencies (FFmpeg & WebGL Mesa Drivers)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg xvfb libgbm-dev libasound2 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc1 libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libss3 libxtst6 ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release xdg-utils wget mesa-utils
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Build & Start Local R3F App
+        run: |
+          npm run build
+          npm run preview -- --port 3000 &
+          npx wait-on http://localhost:3000
+
+      - name: Render 3D Video Frame-by-Frame (720p @ 30 FPS)
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" node scripts/render.js
+
+      - name: Upload Rendered 3D Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3d-animated-video-720p-30fps
+          path: build/rendered_video_720p_30fps.mp4
+          retention-days: 14
