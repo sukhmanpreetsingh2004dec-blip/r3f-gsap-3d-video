@@ -38,8 +38,8 @@ jobs:
       - name: Build & Start Local R3F App
         run: |
           npm run build
-          npx vite preview --port 3000 &
-          npx wait-on http://localhost:3000
+          npx vite preview --port 3000 --host 127.0.0.1 &
+          npx wait-on http://127.0.0.1:3000
 
       - name: Render 3D Video Frame-by-Frame (720p @ 30 FPS)
         run: |
