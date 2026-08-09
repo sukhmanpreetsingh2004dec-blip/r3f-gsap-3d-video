@@ -59,15 +59,19 @@ async function renderVideo() {
   const page = await browser.newPage();
   await page.setViewport({ width: WIDTH, height: HEIGHT });
 
+  page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+  page.on('pageerror', (err) => console.error('PAGE ERROR:', err.toString()));
+
   console.log('🌐 Loading R3F + GSAP app on http://127.0.0.1:3000...');
-  await page.goto('http://127.0.0.1:3000', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:3000', { waitUntil: 'networkidle0' });
 
-  // Wait for canvas to mount
   await page.waitForSelector('canvas', { timeout: 30000 });
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  const totalFrames = await page.evaluate(() => window.getTotalFrames ? window.getTotalFrames() : 300);
+  const totalFrames = await page.evaluate(() => (window.getTotalFrames ? window.getTotalFrames() : 300));
   console.log(`🎬 Capturing ${totalFrames} frames at 720p (1280x720) 30 FPS...`);
+
+  const canvasHandle = await page.$('canvas');
 
   for (let frame = 0; frame <= totalFrames; frame++) {
     await page.evaluate((f) => {
@@ -76,14 +80,13 @@ async function renderVideo() {
       }
     }, frame);
 
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     const frameName = `frame_${String(frame).padStart(4, '0')}.png`;
     const framePath = path.join(FRAMES_DIR, frameName);
 
-    const canvasElement = await page.$('.video-frame-container canvas');
-    if (canvasElement) {
-      await canvasElement.screenshot({ path: framePath, type: 'png' });
+    if (canvasHandle) {
+      await canvasHandle.screenshot({ path: framePath, type: 'png' });
     } else {
       await page.screenshot({ path: framePath, type: 'png' });
     }
