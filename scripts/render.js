@@ -59,10 +59,11 @@ async function renderVideo() {
   const page = await browser.newPage();
   await page.setViewport({ width: WIDTH, height: HEIGHT });
 
-  console.log('🌐 Loading R3F + GSAP app on http://localhost:3000...');
-  await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
+  console.log('🌐 Loading R3F + GSAP app on http://127.0.0.1:3000...');
+  await page.goto('http://127.0.0.1:3000', { waitUntil: 'domcontentloaded' });
 
-  await page.waitForSelector('canvas');
+  // Wait for canvas to mount
+  await page.waitForSelector('canvas', { timeout: 30000 });
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
   const totalFrames = await page.evaluate(() => window.getTotalFrames ? window.getTotalFrames() : 300);
@@ -75,7 +76,7 @@ async function renderVideo() {
       }
     }, frame);
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 30));
 
     const frameName = `frame_${String(frame).padStart(4, '0')}.png`;
     const framePath = path.join(FRAMES_DIR, frameName);
@@ -105,4 +106,7 @@ async function renderVideo() {
   }
 }
 
-renderVideo().catch(console.error);
+renderVideo().catch((err) => {
+  console.error('❌ Render process error:', err);
+  process.exit(1);
+});
