@@ -74,7 +74,12 @@ async function renderVideo() {
   page.on('pageerror', (err) => console.error('PAGE ERROR:', err.toString()));
 
   console.log('🌐 Loading R3F + GSAP app on http://127.0.0.1:3000...');
-  await page.goto('http://127.0.0.1:3000', { waitUntil: 'domcontentloaded' });
+  try {
+    await page.goto('http://127.0.0.1:3000', { waitUntil: 'domcontentloaded', timeout: 15000 });
+  } catch (e) {
+    console.log('Retrying navigation to http://localhost:3000...');
+    await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 15000 });
+  }
 
   await page.waitForSelector('canvas', { timeout: 30000 });
   await new Promise((resolve) => setTimeout(resolve, 2000));
